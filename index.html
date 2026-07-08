@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Return Gate — Scan &amp; Match</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12151A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Return Gate">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#12151A;
+    --surface:#1B2028;
+    --surface-2:#232A34;
+    --line:#2E3642;
+    --text:#F1EEE6;
+    --muted:#8D96A3;
+    --amber:#D9A441;
+    --amber-dim:#4A3D24;
+    --teal:#3FA796;
+    --teal-dim:#1D3E39;
+    --red:#E0574B;
+    --red-dim:#4A2622;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 15% 0%, rgba(217,164,65,0.06), transparent 40%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    min-height:100vh;
+    padding:20px 16px 60px;
+  }
+  .wrap{max-width:720px;margin:0 auto;}
+
+  .masthead{
+    display:flex;align-items:baseline;justify-content:space-between;
+    margin-bottom:18px;border-bottom:1px dashed var(--line);padding-bottom:14px;
+  }
+  .masthead h1{
+    font-size:19px;font-weight:700;letter-spacing:0.2px;margin:0;
+  }
+  .masthead h1 span{color:var(--amber);}
+  .masthead .tag{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:1px;
+  }
+
+  .stats{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;
+  }
+  .stat{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:10px 8px;text-align:center;
+  }
+  .stat .n{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;line-height:1;}
+  .stat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-top:4px;}
+  .stat.pending .n{color:var(--amber);}
+  .stat.returned .n{color:var(--teal);}
+  .stat.unmatched .n{color:var(--red);}
+
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;margin-bottom:14px;
+  }
+  .card h2{
+    font-size:13px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);
+    margin:0 0 12px 0;display:flex;align-items:center;gap:8px;
+  }
+  .card h2 .idx{
+    width:18px;height:18px;border-radius:4px;background:var(--surface-2);
+    display:inline-flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--amber);
+  }
+
+  textarea{
+    width:100%;min-height:90px;background:var(--bg);border:1px solid var(--line);
+    border-radius:8px;color:var(--text);font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;padding:10px;resize:vertical;
+  }
+  textarea::placeholder{color:#5B6472;}
+  textarea:focus, input:focus{outline:1px solid var(--amber);outline-offset:1px;}
+
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+  input[type="text"]{
+    flex:1;min-width:160px;background:var(--bg);border:1px solid var(--line);
+    border-radius:8px;color:var(--text);font-family:'IBM Plex Mono',monospace;
+    font-size:14px;padding:11px 12px;
+  }
+  input[type="file"]{
+    font-family:'Space Grotesk',sans-serif;font-size:12px;color:var(--muted);
+    flex:1;min-width:180px;
+  }
+
+  button{
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;
+    border-radius:8px;border:1px solid transparent;padding:11px 16px;
+    cursor:pointer;transition:transform .05s ease, opacity .15s ease;
+  }
+  button:active{transform:scale(0.97);}
+  button:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-primary{background:var(--amber);color:#1A1608;}
+  .btn-primary:hover:not(:disabled){opacity:0.9;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--text);}
+  .btn-ghost:hover:not(:disabled){border-color:var(--amber);}
+  .btn-danger{background:transparent;border:1px solid var(--red);color:var(--red);}
+  .btn-stop{background:var(--red);color:#fff;}
+  .btn-sm{padding:7px 12px;font-size:12px;}
+  .btn-full{width:100%;}
+
+  #reader{
+    width:100%;border-radius:8px;overflow:hidden;border:1px solid var(--line);
+    display:none;margin-top:12px;
+  }
+  #reader.active{display:block;}
+
+  .scan-hint{
+    font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5;
+  }
+  .divider-or{
+    display:flex;align-items:center;gap:10px;margin:14px 0 4px;
+    color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;
+  }
+  .divider-or::before,.divider-or::after{content:"";flex:1;height:1px;background:var(--line);}
+
+  .manifest-summary{
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--muted);
+    margin-top:10px;
+  }
+  .manifest-summary b{color:var(--text);}
+
+  .log{
+    border-top:1px dashed var(--line);margin-top:4px;
+  }
+  .log-empty{
+    text-align:center;color:var(--muted);font-size:12.5px;padding:24px 0;
+  }
+  .log-row{
+    display:grid;grid-template-columns:1fr 1fr auto auto;gap:10px;align-items:center;
+    padding:10px 0;border-bottom:1px dotted var(--line);
+    font-family:'IBM Plex Mono',monospace;font-size:12px;
+  }
+  .log-row:last-child{border-bottom:none;}
+  .log-row .awb{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .log-row .oid{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .log-row .time{color:var(--muted);font-size:10.5px;white-space:nowrap;}
+  .badge{
+    font-size:10px;padding:3px 8px;border-radius:99px;text-transform:uppercase;
+    letter-spacing:0.4px;white-space:nowrap;text-align:center;
+  }
+  .badge.returned{background:var(--teal-dim);color:var(--teal);}
+  .badge.unmatched{background:var(--red-dim);color:var(--red);}
+  .badge.duplicate{background:var(--amber-dim);color:var(--amber);}
+
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+    background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+    padding:12px 18px;border-radius:8px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    opacity:0;transition:all .25s ease;pointer-events:none;z-index:50;max-width:90%;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.success{border-color:var(--teal);}
+  .toast.error{border-color:var(--red);}
+
+  .export-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .footer-note{
+    text-align:center;color:var(--muted);font-size:11px;margin-top:22px;line-height:1.6;
+  }
+  @media (max-width:420px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .log-row{grid-template-columns:1fr auto;grid-template-areas:"awb time" "oid badge";row-gap:4px;}
+    .log-row .awb{grid-area:awb;}
+    .log-row .time{grid-area:time;}
+    .log-row .oid{grid-area:oid;}
+    .log-row .badge{grid-area:badge;justify-self:end;}
+    .export-row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Return <span>Gate</span></h1>
+    <div class="tag">Scan → Match → Log</div>
+  </div>
+
+  <button id="installBtn" class="btn-primary btn-full" style="display:none;margin-bottom:14px;">Install app on this device</button>
+
+  <div class="stats">
+    <div class="stat"><div class="n" id="statTotal">0</div><div class="l">In manifest</div></div>
+    <div class="stat pending"><div class="n" id="statPending">0</div><div class="l">Pending</div></div>
+    <div class="stat returned"><div class="n" id="statReturned">0</div><div class="l">Returned</div></div>
+    <div class="stat unmatched"><div class="n" id="statUnmatched">0</div><div class="l">Unmatched</div></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="idx">1</span>Load return manifest</h2>
+    <textarea id="manifestInput" placeholder="Paste rows here — Order ID, Return AWB per line&#10;e.g.&#10;OD1029384756, RTN88213400&#10;OD1029384999, RTN88213401"></textarea>
+    <div class="row">
+      <input type="file" id="fileInput" accept=".csv,.txt">
+      <button class="btn-primary" id="loadManifestBtn">Load manifest</button>
+    </div>
+    <div class="manifest-summary" id="manifestSummary">No manifest loaded yet.</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="idx">2</span>Scan return AWB</h2>
+    <div class="row">
+      <button class="btn-primary btn-full" id="startScanBtn">Start camera scanner</button>
+    </div>
+    <div id="reader"></div>
+    <div class="row" id="stopRow" style="display:none;">
+      <button class="btn-stop btn-full" id="stopScanBtn">Stop scanner</button>
+    </div>
+    <p class="scan-hint">Point the camera at the barcode on the return parcel label. A match logs automatically — no need to tap anything.</p>
+
+    <div class="divider-or">or enter manually</div>
+    <div class="row">
+      <input type="text" id="manualAwbInput" placeholder="Type or gun-scan AWB, then Enter">
+      <button class="btn-ghost btn-sm" id="manualAddBtn">Add</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="idx">3</span>Scan log</h2>
+    <div class="log" id="logList">
+      <div class="log-empty">No scans yet — scanned parcels will appear here.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="idx">4</span>Export</h2>
+    <div class="export-row">
+      <button class="btn-ghost" id="exportManifestBtn">Download full manifest (.csv)</button>
+      <button class="btn-ghost" id="exportUnmatchedBtn">Download unmatched only (.csv)</button>
+    </div>
+    <div class="row">
+      <button class="btn-danger btn-sm" id="clearBtn">Clear all data</button>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Data is saved to this device automatically as you scan.<br>
+    Unmatched scans mean the AWB wasn't in the loaded manifest — check for a fresh return report before flagging as false.
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ---------- State ----------
+  let manifest = [];     // {orderId, returnAwb, status: 'pending'|'returned', scannedAt}
+  let eventLog = [];      // {awb, orderId, status: 'returned'|'duplicate'|'unmatched', time}
+  let html5QrCode = null;
+  let scannerRunning = false;
+  let lastScanCode = '', lastScanTime = 0;
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- Storage ----------
+  async function saveState() {
+    try {
+      await window.storage.set('return-gate-data', JSON.stringify({ manifest, eventLog }), false);
+    } catch (e) { console.error('save failed', e); }
+  }
+  async function loadState() {
+    try {
+      const res = await window.storage.get('return-gate-data', false);
+      if (res && res.value) {
+        const data = JSON.parse(res.value);
+        manifest = data.manifest || [];
+        eventLog = data.eventLog || [];
+      }
+    } catch (e) { /* nothing saved yet */ }
+    render();
+  }
+
+  // ---------- Toast ----------
+  let toastTimer;
+  function showToast(msg, type) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + (type || '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 2200);
+  }
+
+  // ---------- Sound ----------
+  function beep(freq, duration) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + duration / 1000);
+      setTimeout(() => ctx.close(), duration + 150);
+    } catch (e) { /* audio not available */ }
+  }
+  const successBeep = () => beep(1300, 110);
+  const errorBeep = () => { beep(280, 140); setTimeout(() => beep(280, 140), 170); };
+
+  // ---------- Manifest parsing ----------
+  function parseManifest(text) {
+    const lines = text.trim().split(/\r?\n/).filter(l => l.trim().length);
+    if (!lines.length) return [];
+    const delim = lines[0].includes('\t') ? '\t' : ',';
+    let rows = lines.map(l => l.split(delim).map(c => c.trim().replace(/^"|"$/g, '')));
+
+    let orderCol = 0, awbCol = 1;
+    const first = rows[0].map(c => c.toLowerCase());
+    const looksLikeHeader = first.some(c => c.includes('order')) || first.some(c => c.includes('awb') || c.includes('tracking'));
+    if (looksLikeHeader) {
+      const oc = first.findIndex(c => c.includes('order'));
+      const ac = first.findIndex(c => c.includes('awb') || c.includes('tracking'));
+      orderCol = oc >= 0 ? oc : 0;
+      awbCol = ac >= 0 ? ac : 1;
+      rows = rows.slice(1);
+    }
+    return rows
+      .filter(r => r.length > Math.max(orderCol, awbCol) && r[orderCol] && r[awbCol])
+      .map(r => ({
+        orderId: r[orderCol],
+        returnAwb: r[awbCol],
+        status: 'pending',
+        scannedAt: null
+      }));
+  }
+
+  function loadManifestFromText(text) {
+    const parsed = parseManifest(text);
+    if (!parsed.length) {
+      showToast('Could not find any Order ID / Return AWB rows', 'error');
+      return;
+    }
+    // merge: keep existing scanned status for AWBs already known
+    const existingByAwb = {};
+    manifest.forEach(m => { existingByAwb[m.returnAwb.toLowerCase()] = m; });
+    manifest = parsed.map(row => {
+      const existing = existingByAwb[row.returnAwb.toLowerCase()];
+      return existing ? existing : row;
+    });
+    saveState();
+    render();
+    showToast(parsed.length + ' orders loaded into manifest', 'success');
+  }
+
+  $('loadManifestBtn').addEventListener('click', () => {
+    const text = $('manifestInput').value;
+    if (!text.trim()) { showToast('Paste or upload a manifest first', 'error'); return; }
+    loadManifestFromText(text);
+    $('manifestInput').value = '';
+  });
+
+  $('fileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => loadManifestFromText(ev.target.result);
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  // ---------- Scan processing ----------
+  function processScan(code) {
+    if (!code) return;
+    const match = manifest.find(m => m.returnAwb.toLowerCase() === code.toLowerCase());
+    const now = new Date();
+    const timeStr = now.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+    if (match && match.status === 'returned') {
+      eventLog.unshift({ awb: code, orderId: match.orderId, status: 'duplicate', time: timeStr });
+      showToast('Already logged — Order ' + match.orderId, '');
+      beep(700, 90);
+    } else if (match) {
+      match.status = 'returned';
+      match.scannedAt = timeStr;
+      eventLog.unshift({ awb: code, orderId: match.orderId, status: 'returned', time: timeStr });
+      showToast('Matched → Order ' + match.orderId, 'success');
+      successBeep();
+    } else {
+      eventLog.unshift({ awb: code, orderId: null, status: 'unmatched', time: timeStr });
+      showToast('No match for ' + code + ' — flagged', 'error');
+      errorBeep();
+    }
+    saveState();
+    render();
+  }
+
+  $('manualAddBtn').addEventListener('click', () => {
+    const val = $('manualAwbInput').value.trim();
+    if (val) { processScan(val); $('manualAwbInput').value = ''; }
+  });
+  $('manualAwbInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const val = e.target.value.trim();
+      if (val) { processScan(val); e.target.value = ''; }
+    }
+  });
+
+  // ---------- Camera scanner ----------
+  $('startScanBtn').addEventListener('click', () => {
+    const readerEl = $('reader');
+    readerEl.classList.add('active');
+    $('startScanBtn').style.display = 'none';
+    $('stopRow').style.display = 'flex';
+
+    const config = {
+      fps: 10,
+      qrbox: { width: 280, height: 140 },
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.CODE_93,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.ITF,
+        Html5QrcodeSupportedFormats.QR_CODE
+      ]
+    };
+    html5QrCode = new Html5Qrcode('reader');
+    html5QrCode.start({ facingMode: 'environment' }, config, onScanSuccess, () => {})
+      .then(() => { scannerRunning = true; })
+      .catch(err => {
+        showToast('Camera unavailable — use manual entry below', 'error');
+        readerEl.classList.remove('active');
+        $('startScanBtn').style.display = 'block';
+        $('stopRow').style.display = 'none';
+      });
+  });
+
+  $('stopScanBtn').addEventListener('click', stopScanner);
+
+  function stopScanner() {
+    if (html5QrCode && scannerRunning) {
+      html5QrCode.stop().then(() => {
+        html5QrCode.clear();
+        scannerRunning = false;
+        $('reader').classList.remove('active');
+        $('startScanBtn').style.display = 'block';
+        $('stopRow').style.display = 'none';
+      }).catch(() => {});
+    }
+  }
+
+  function onScanSuccess(decodedText) {
+    const now = Date.now();
+    if (decodedText === lastScanCode && now - lastScanTime < 2000) return;
+    lastScanCode = decodedText;
+    lastScanTime = now;
+    processScan(decodedText.trim());
+  }
+
+  // ---------- Render ----------
+  function render() {
+    const total = manifest.length;
+    const returned = manifest.filter(m => m.status === 'returned').length;
+    const pending = total - returned;
+    const unmatchedCount = eventLog.filter(e => e.status === 'unmatched').length;
+
+    $('statTotal').textContent = total;
+    $('statPending').textContent = pending;
+    $('statReturned').textContent = returned;
+    $('statUnmatched').textContent = unmatchedCount;
+
+    $('manifestSummary').innerHTML = total
+      ? 'Manifest loaded — <b>' + total + '</b> orders, <b>' + returned + '</b> already marked returned.'
+      : 'No manifest loaded yet.';
+
+    const logEl = $('logList');
+    if (!eventLog.length) {
+      logEl.innerHTML = '<div class="log-empty">No scans yet — scanned parcels will appear here.</div>';
+    } else {
+      logEl.innerHTML = eventLog.slice(0, 100).map(e => {
+        const badgeClass = e.status === 'returned' ? 'returned' : (e.status === 'unmatched' ? 'unmatched' : 'duplicate');
+        const badgeText = e.status === 'returned' ? 'Returned' : (e.status === 'unmatched' ? 'Unmatched' : 'Already logged');
+        return '<div class="log-row">' +
+          '<div class="awb">' + escapeHtml(e.awb) + '</div>' +
+          '<div class="oid">' + (e.orderId ? escapeHtml(e.orderId) : '—') + '</div>' +
+          '<div class="time">' + e.time + '</div>' +
+          '<div class="badge ' + badgeClass + '">' + badgeText + '</div>' +
+          '</div>';
+      }).join('');
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- Export ----------
+  function downloadCsv(filename, rows) {
+    const csv = rows.map(r => r.map(cell => {
+      const s = String(cell === null || cell === undefined ? '' : cell);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  $('exportManifestBtn').addEventListener('click', () => {
+    if (!manifest.length) { showToast('No manifest to export', 'error'); return; }
+    const rows = [['Order ID', 'Return AWB', 'Status', 'Scanned At']];
+    manifest.forEach(m => rows.push([m.orderId, m.returnAwb, m.status === 'returned' ? 'Returned' : 'Pending', m.scannedAt || '']));
+    downloadCsv('return-manifest-' + Date.now() + '.csv', rows);
+  });
+
+  $('exportUnmatchedBtn').addEventListener('click', () => {
+    const unmatched = eventLog.filter(e => e.status === 'unmatched');
+    if (!unmatched.length) { showToast('No unmatched scans to export', 'error'); return; }
+    const rows = [['Scanned AWB', 'Time']];
+    unmatched.forEach(e => rows.push([e.awb, e.time]));
+    downloadCsv('unmatched-scans-' + Date.now() + '.csv', rows);
+  });
+
+  $('clearBtn').addEventListener('click', () => {
+    if (confirm('This clears the manifest and scan log from this device. Continue?')) {
+      manifest = [];
+      eventLog = [];
+      saveState();
+      render();
+      showToast('Data cleared', '');
+    }
+  });
+
+  // ---------- Init ----------
+  loadState();
+
+  // ---------- PWA: service worker registration ----------
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch((err) => {
+        console.warn('Service worker registration failed', err);
+      });
+    });
+  }
+
+  // ---------- PWA: install prompt (Android/Chrome) ----------
+  let deferredInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    const btn = $('installBtn');
+    if (btn) btn.style.display = 'block';
+  });
+  const installBtnEl = document.getElementById('installBtn');
+  if (installBtnEl) {
+    installBtnEl.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      installBtnEl.style.display = 'none';
+    });
+  }
+</script>
+</body>
+</html>
